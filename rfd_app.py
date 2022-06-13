@@ -6,10 +6,9 @@ Created on Mon Jun  6 13:57:22 2022
 """
 
 import streamlit as st
-import numpy as np
+import plotly.express as px
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from PIL import Image
 from sklearn.linear_model import LinearRegression
 
@@ -90,7 +89,7 @@ with inputs:
         startTime = st.number_input('For the contraction of interest, what time was the contraction supposed to start? For example, if you analyzed a contraction that included a five-second resting baseline, enter 5.',min_value=1.0,max_value=60.0,step=0.1)
         if (onset == 'Manual onset determination') & (offset == 'Yes'):
             if file:
-                manualTime = st.slider('How long would you like your manual viewing window to be in milliseconds?',50,2000,value=300)
+                manualTime = st.slider('How long would you like your manual viewing window to be in milliseconds?',50,2000,value=300,step=50)
                 manualTime = manualTime / 1000
                 startTimeIndex = forceData[forceData['Time'].gt(startTime)].index[0]
                 lowViewTime = forceData.loc[startTimeIndex,'Time'] - (manualTime/2)
@@ -103,25 +102,15 @@ with inputs:
                     offsetValue = forceData.loc[offStart:offStop,'Corrected'].mean()
                     forceData['Corrected'] = forceData['Corrected'] - offsetValue
                     Manual = forceData[(forceData['Time'] > lowViewTime) & (forceData['Time'] < highViewTime)] 
-                    fig2,ax2 = plt.subplots()
-                    ax2.plot(Manual['Time'],Manual['Corrected'])
-                    ax2.hlines(xmin=0,xmax=100,y=forceData.loc[lowViewIndex:highViewIndex,'Corrected'].max(),color='r',linestyle='--')
-                    ax2.set(xlim=[lowViewTime,highViewTime], # Update this once Manual is updated
-                            xlabel='Time (s)',
-                            ylabel='Force')
-                    st.pyplot(fig2)
+                    fig = px.line(Manual,x='Time',y='Corrected')
+                    st.write(fig)
                     manualOnset = st.number_input('Based on the graph above, what time did your contraction start?')
                 else:
                     offsetValue = forceData.loc[offStart:offStop,'Force'].mean()
                     forceData['Force'] = forceData['Force'] - offsetValue
                     Manual = forceData[(forceData['Time'] > lowViewTime) & (forceData['Time'] < highViewTime)] 
-                    fig2,ax2 = plt.subplots()
-                    ax2.plot(Manual['Time'],Manual['Force'])
-                    ax2.hlines(xmin=0,xmax=100,y=forceData.loc[lowViewTime:highViewTime,'Force'].max(),color='r',linestyle='--')
-                    ax2.set(xlim=[lowViewTime,highViewTime], # Update this once Manual is updated
-                            xlabel='Time (s)',
-                            ylabel='Force')
-                    st.pyplot(fig2)
+                    fig = px.line(Manual,x='Time',y='Force')
+                    st.write(fig)
                     manualOnset = st.number_input('Based on the graph above, what time did your contraction start?')
         elif (onset == 'Onset will be +3SD of the baseline signal') & (offset == 'Yes'):
             if file:
@@ -141,7 +130,6 @@ with inputs:
                     st.pyplot(fig3)
                 else:
                     ax3.plot(forceData['Time'],forceData['Force'])
-                    #ax3.hlines(xmin=0,xmax=100,y= offsetValue + (forceData.loc[offStart:offStop,'Force'].std()*5))
                     ax3.set(xlabel='Time (s)',
                             ylabel='Force')
                     st.pyplot(fig3)
@@ -154,14 +142,8 @@ with inputs:
                     start = manualOnset
                     torque = 'Corrected'
                     onsetIndex = data[data[time].gt(start)].index[0]
-                    #baselineStart = start - avg_duration
-                    #baselineStartIndex = data[data[time].gt(baselineStart)].index[0]
                     startTime = data.iloc[onsetIndex,0]
-                    #baselineAvg = data[torque].iloc[baselineStartIndex:startIndex].mean()
-                    #baselineSD = data[torque].iloc[baselineStartIndex:startIndex].std()
-                    #threeSD = baselineSD * 3
                     contractionStart = data[data.index >= onsetIndex]
-                    #onsetIndex = contractionStart[contractionStart[torque]>(baselineAvg + threeSD)].index[0]
                     startTorque = data.loc[onsetIndex,torque]
                     baselineInfo = pd.DataFrame({#'startIndex':startIndex,
                                                  'startTime':startTime,
