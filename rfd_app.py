@@ -31,11 +31,14 @@ with calibration:
         st.text('If you are uploading a file that \nexpresses force in raw voltage, \nclick below to upload a calibration \nfile.')
         if convert == 'Yes':
             cal = st.file_uploader('Upload your calibration file here')
-            calFile = pd.read_csv(cal,sep=',',names=['Voltage','Force'],header=0)
-            st.write(calFile.head())
-            calibration = LinearRegression()
-            calibration.fit(calFile['Voltage'].to_numpy().reshape(-1,1),calFile['Force'].to_numpy().reshape(-1,1))      
-    
+            try:
+                calFile = pd.read_csv(cal,sep=',',names=['Voltage','Force'],header=0)
+                st.write(calFile.head())
+                calibration = LinearRegression()
+                calibration.fit(calFile['Voltage'].to_numpy().reshape(-1,1),calFile['Force'].to_numpy().reshape(-1,1))      
+            except:
+                pass
+            
 with force:
     with st.expander('Step 2: Upload your force-time curve'):
         col1, col2 = st.columns(2)
@@ -96,8 +99,8 @@ with inputs:
                 lowViewIndex = forceData[forceData['Time'].gt(lowViewTime)].index[0]
                 highViewTime = forceData.loc[startTimeIndex,'Time'] + (manualTime/2)
                 highViewIndex = forceData[forceData['Time'].gt(highViewTime)].index[0]
-                offStart = sampleFreq
-                offStop = sampleFreq * 5 #Sloppy code used for proof of concept, adapt to make it more flexible
+                offStart = sampleFreq * (startTime - 4)
+                offStop = sampleFreq * startTime
                 if 'Corrected' in forceData.columns:
                     offsetValue = forceData.loc[offStart:offStop,'Corrected'].mean()
                     forceData['Corrected'] = forceData['Corrected'] - offsetValue
@@ -114,8 +117,8 @@ with inputs:
                     manualOnset = st.number_input('Based on the graph above, what time did your contraction start?')
         elif (onset == 'Onset will be +3SD of the baseline signal') & (offset == 'Yes'):
             if file:
-                offStart = sampleFreq
-                offStop = sampleFreq * 5 #Sloppy code used for proof of concept, adapt to make it more flexible
+                offStart = sampleFreq * (startTime - 4)
+                offStop = sampleFreq * startTime 
                 if 'Corrected' in forceData.columns:
                     offsetValue = forceData.loc[offStart:offStop,'Corrected'].mean()
                     forceData['Corrected'] = forceData['Corrected'] - offsetValue
@@ -247,7 +250,8 @@ with rfd:
         if CalcButton:
             fig4,ax4 = plt.subplots()
             if 'Corrected' in forceData.columns:
-                ax4.plot(forceData['Time'],forceData['Corrected'],label='Force')
+                ax4.plot(forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Time'],forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Corrected'])
+                #ax4.plot(forceData['Time'],forceData['Corrected'],label='Force')
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'Corrected'],label='rfd50')
                 ax4.scatter(forceData.loc[rfdTable['onehundred_index'],'Time'],forceData.loc[rfdTable['onehundred_index'],'Corrected'],label='rfd100')
                 ax4.scatter(forceData.loc[rfdTable['twohundred_index'],'Time'],forceData.loc[rfdTable['twohundred_index'],'Corrected'],label='rfd200')
@@ -255,10 +259,11 @@ with rfd:
                 legend = ax4.legend(loc='upper right')
                 ax4.set(xlabel = 'Time (s)',
                         ylabel = 'Force (N)',
-                        xlim=[0,15])
+                        xlim=[recordStartTime,stopTime])
                 st.pyplot(fig4)
             else:
-                ax4.plot(forceData['Time'],forceData['Force'],label='Force')
+                ax4.plot(forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Time'],forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Force'])
+                #ax4.plot(forceData['Time'],forceData['Force'],label='Force')
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'Force'],label='rfd50')
                 ax4.scatter(forceData.loc[rfdTable['onehundred_index'],'Time'],forceData.loc[rfdTable['onehundred_index'],'Force'],label='rfd100')
                 ax4.scatter(forceData.loc[rfdTable['twohundred_index'],'Time'],forceData.loc[rfdTable['twohundred_index'],'Force'],label='rfd200')
@@ -266,7 +271,7 @@ with rfd:
                 legend = ax4.legend(loc='upper right')
                 ax4.set(xlabel = 'Time (s)',
                         ylabel = 'Force (N)',
-                        xlim=[0,15])
+                        xlim=[recordStartTime,stopTime])
                 st.pyplot(fig4)
             st.write(finalRfdTable.head())
             st.download_button('Click here to download your RFD values',finalRfdTable.to_csv(),mime='text/csv')
