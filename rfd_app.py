@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jun  6 13:57:22 2022
+Created on Fri Jul  1 16:47:19 2022
 
-@author: ncoker
+@author: ncoke
 """
 
 import streamlit as st
@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 from sklearn.linear_model import LinearRegression
+from scipy.signal import filtfilt,butter
 
 header = st.container()
 calibration = st.container()
@@ -107,14 +108,14 @@ with inputs:
                     Manual = forceData[(forceData['Time'] > lowViewTime) & (forceData['Time'] < highViewTime)] 
                     fig = px.line(Manual,x='Time',y='Corrected')
                     st.write(fig)
-                    manualOnset = st.number_input('Based on the graph above, what time did your contraction start?')
+                    manualOnset = st.number_input('Based on the graph above, what time did your contraction start?',step=1e-6,format="%.5f")
                 else:
                     offsetValue = forceData.loc[offStart:offStop,'Force'].mean()
                     forceData['Force'] = forceData['Force'] - offsetValue
                     Manual = forceData[(forceData['Time'] > lowViewTime) & (forceData['Time'] < highViewTime)] 
                     fig = px.line(Manual,x='Time',y='Force')
                     st.write(fig)
-                    manualOnset = st.number_input('Based on the graph above, what time did your contraction start?')
+                    manualOnset = st.number_input('Based on the graph above, what time did your contraction start?',step = 1e-6,format="%.5f")
         elif (onset == 'Onset will be +3SD of the baseline signal') & (offset == 'Yes'):
             if file:
                 offStart = sampleFreq * (startTime - 4)
@@ -136,7 +137,20 @@ with inputs:
                     ax3.set(xlabel='Time (s)',
                             ylabel='Force')
                     st.pyplot(fig3)
+        filter_data = st.radio('Would you like to filter your data before calculating RFD?',['Yes','No'])
         CalcButton = st.button('Click here to calculate your RFD values')
+    if filter_data:
+        def filter_data(forceData,order=4,low_cut=15,sampleFreq=sampleFreq):
+            nyq = sampleFreq * 0.5
+            low = low_cut / nyq
+            b,a = butter(order,low,'lowpass',analog=False)
+            if 'Corrected' in forceData.columns:
+                filtered = filtfilt(b,a,forceData['Corrected'])
+            else:
+                filtered = filtfilt(b,a,forceData['Force'])
+            return filtered
+        filtered = pd.DataFrame({'Time':forceData['Time'], 
+                                 'filtered':filter_data(forceData)})
         
     if CalcButton:
         def baseline(data, time = 'Time', torque = 'Force', start = startTime, avg_duration = 4): # will probably want to update start and avg_duration to make them more flexible
@@ -204,7 +218,24 @@ with inputs:
             rel50Index = data[data[time].gt(rel50Time)].index[0]
             rel100Index = data[data[time].gt(rel100Time)].index[0]
             rel200Index = data[data[time].gt(rel200Time)].index[0]
-            if 'Corrected' in data.columns:
+            if filter_data:
+                fifty_forcediff = data.loc[rel50Index,'filtered'] - data.loc[onsetIndex,'filtered'] 
+                fifty_timediff = data.loc[rel50Index,time] - data.loc[onsetIndex,time]
+                rfd50 = fifty_forcediff / fifty_timediff
+                onehund_forcediff = data.loc[rel100Index,'filtered'] - data.loc[onsetIndex,'filtered']
+                onehund_timediff = data.loc[rel100Index,time] - data.loc[onsetIndex,time]
+                rfd100 = onehund_forcediff / onehund_timediff
+                twohund_forcediff = data.loc[rel200Index,'filtered'] - data.loc[onsetIndex,'filtered']
+                twohund_timediff = data.loc[rel200Index,time] - data.loc[onsetIndex,time]
+                rfd200 = twohund_forcediff / twohund_timediff
+                output = pd.DataFrame({'fifty_index':rel50Index,
+                                       'onehundred_index':rel100Index,
+                                       'twohundred_index':rel200Index,
+                                       'rfd50':rfd50,
+                                       'rfd100':rfd100,
+                                       'rfd200':rfd200},
+                                      index=[0])
+            elif 'Corrected' in data.columns:
                 fifty_forcediff = data.loc[rel50Index,'Corrected'] - data.loc[onsetIndex,'Corrected'] 
                 fifty_timediff = data.loc[rel50Index,time] - data.loc[onsetIndex,time]
                 rfd50 = fifty_forcediff / fifty_timediff
@@ -241,7 +272,10 @@ with inputs:
             return output
         
         onset = baseline(data=forceData)
-        rfdTable = rfdcalc(data=forceData,onsetIndex = onset.loc[0,'onsetIndex'],startTorque = onset.loc[0,'startTorque'])
+        if filter_data:
+            rfdTable = rfdcalc(data=filtered,onsetIndex = onset.loc[0,'onsetIndex'],startTorque = onset.loc[0,'startTorque'])
+        else:
+            rfdTable = rfdcalc(data=forceData,onsetIndex = onset.loc[0,'onsetIndex'],startTorque = onset.loc[0,'startTorque'])            
         finalRfdTable = rfdTable.loc[0,['rfd50','rfd100','rfd200']]
 with rfd:
     with st.expander('Step 5: View and download your RFD values'):
@@ -249,7 +283,18 @@ with rfd:
         st.text("After clicking the button above, a plot of your time points overlaid on the \nforce-time curve and a table of your RFD values should appear below.")
         if CalcButton:
             fig4,ax4 = plt.subplots()
-            if 'Corrected' in forceData.columns:
+            if filter_data:
+                ax4.plot(filtered.loc[(filtered['Time']>recordStartTime) & (filtered['Time']<stopTime),'Time'],filtered.loc[(filtered['Time']>recordStartTime) & (filtered['Time']<stopTime),'filtered'])
+                ax4.scatter(filtered.loc[rfdTable['fifty_index'],'Time'],filtered.loc[rfdTable['fifty_index'],'filtered'],label='rfd50')
+                ax4.scatter(filtered.loc[rfdTable['onehundred_index'],'Time'],filtered.loc[rfdTable['onehundred_index'],'filtered'],label='rfd100')
+                ax4.scatter(filtered.loc[rfdTable['twohundred_index'],'Time'],filtered.loc[rfdTable['twohundred_index'],'filtered'],label='rfd200')
+                ax4.hlines(xmin=0,xmax=100,y=filtered.loc[onset.loc[0,'onsetIndex'],'filtered'],color='r',linestyle='--',label='onset')
+                legend = ax4.legend(loc='upper right')
+                ax4.set(xlabel = 'Time (s)',
+                        ylabel = 'Force (N)',
+                        xlim=[recordStartTime,stopTime])
+                st.pyplot(fig4)
+            elif 'Corrected' in forceData.columns:
                 ax4.plot(forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Time'],forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Corrected'])
                 #ax4.plot(forceData['Time'],forceData['Corrected'],label='Force')
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'Corrected'],label='rfd50')
