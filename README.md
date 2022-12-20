@@ -1,7 +1,7 @@
 # rfd_calculator_app
 Streamlit app that will take an isometric force time-series and calculate RFD through either automated or manual detection methods
 
-[You can access the app here](https://share.streamlit.io/nacoker/rfd_calculator_app/main/rfd_app.py)
+[You can access the app here](https://rfd-calculator.streamlit.app/)
 
 The rfd_app.py file creates a streamlit app that accepts inputs from the user and calculates commonly used metrics for rate of force development (RFD) based on user responses. The app consists of five collapsible menus that produce a step-by-step walkthrough. 
 
