@@ -5,3 +5,4 @@ plotly==5.8.2
 scikit_learn==1.1.1
 scipy==1.8.0
 streamlit==1.9.2
+streamlit_extras==0.2.4
