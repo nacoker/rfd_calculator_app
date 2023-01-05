@@ -173,65 +173,54 @@ with inputs:
                     st.pyplot(fig3)
         CalcButton = st.button('Click here to calculate your RFD values') # Button to initiate calculation of RFD
     if CalcButton:
-        def baseline(data, time = 'Time', torque = 'Force', start = startTime, avg_duration = 4): #Create function for calculation of baseline
-            if 'Corrected' in data.columns:    
+        def baseline(data,time='Time',torque='Force',start=startTime,avg_duration=4):
+            if 'filtered' in data.columns:
+                if (onset == 'Manual onset determination'):
+                    start = manualOnset
+                    torque = 'filtered'
+                    onsetIndex = data[data[time].gt(start)].index[0]
+                    return onsetIndex
+                elif (onset == 'Onset will be +3SD of the baseline signal'):
+                    torque = 'filtered'
+                    startIndex = data[data[time].gt(start)].index[0]
+                    baselineStart = start - avg_duration
+                    baselineStartIndex = data[data[time].gt(baselineStart)].index[0]
+                    baselineAvg = data[torque].iloc[baselineStartIndex:startIndex].mean()
+                    baselineSD = data[torque].iloc[baselineStartIndex:startIndex].std()
+                    threeSD = baselineSD * 3
+                    onsetIndex = data[data[torque]>(baselineAvg + threeSD)].index[0]
+                    return onsetIndex
+            elif 'Corrected' in data.columns:
                 if (onset == 'Manual onset determination'):
                     start = manualOnset
                     torque = 'Corrected'
                     onsetIndex = data[data[time].gt(start)].index[0]
-                    startTime = data.iloc[onsetIndex,0]
-                    contractionStart = data[data.index >= onsetIndex]
-                    startTorque = data.loc[onsetIndex,torque]
-                    baselineInfo = pd.DataFrame({#'startIndex':startIndex,
-                                                 'startTime':startTime,
-                                                 #'baselineAvg':baselineAvg,
-                                                 #'baselineSD':baselineSD,
-                                                 #'threeSD':threeSD,
-                                                 'onsetIndex':onsetIndex,
-                                                 'startTorque':startTorque},
-                                                index=[0])
-                elif onset == 'Onset will be +3SD of the baseline signal':
+                    return onsetIndex
+                elif (onset == 'Onset will be +3SD of the baseline signal'):
                     torque = 'Corrected'
                     startIndex = data[data[time].gt(start)].index[0]
                     baselineStart = start - avg_duration
                     baselineStartIndex = data[data[time].gt(baselineStart)].index[0]
-                    startTime = data.iloc[startIndex,0]
                     baselineAvg = data[torque].iloc[baselineStartIndex:startIndex].mean()
                     baselineSD = data[torque].iloc[baselineStartIndex:startIndex].std()
                     threeSD = baselineSD * 3
-                    contractionStart = data[data.index >= startIndex]
-                    onsetIndex = contractionStart[contractionStart[torque]>(baselineAvg + threeSD)].index[0]
-                    startTorque = data.loc[onsetIndex,torque]
-                    baselineInfo = pd.DataFrame({'startIndex':startIndex,
-                                                 'startTime':startTime,
-                                                 'baselineAvg':baselineAvg,
-                                                 'baselineSD':baselineSD,
-                                                 'threeSD':threeSD,
-                                                 'onsetIndex':onsetIndex,
-                                                 'startTorque':startTorque},
-                                                index=[0])
+                    onsetIndex = data[data[torque]>(baselineAvg + threeSD)].index[0]
+                    return onsetIndex
             else:
-                startIndex = data[data[time].gt(start)].index[0]
-                baselineStart = start - avg_duration
-                baselineStartIndex = data[data[time].gt(baselineStart)].index[0]
-                startTime = data.iloc[startIndex,0]
-                baselineAvg = data[torque].iloc[baselineStartIndex:startIndex].mean()
-                baselineSD = data[torque].iloc[baselineStartIndex:startIndex].std()
-                threeSD = baselineSD * 3
-                contractionStart = data[data.index >= startIndex]
-                onsetIndex = contractionStart[contractionStart[torque]>(baselineAvg + threeSD)].index[0]
-                startTorque = data.loc[onsetIndex,torque]
-                baselineInfo = pd.DataFrame({'startIndex':startIndex,
-                                             'startTime':startTime,
-                                             'baselineAvg':baselineAvg,
-                                             'baselineSD':baselineSD,
-                                             'threeSD':threeSD,
-                                             'onsetIndex':onsetIndex,
-                                             'startTorque':startTorque},
-                                            index=[0])
-            return baselineInfo 
-        
-        def rfdcalc(data, onsetIndex, startTorque, time = 'Time', rfd50Time = 0.050, rfd100Time = 0.100, rfd200Time = 0.200): # Define function for calculation of RFD
+                if (onset == 'Manual onset determination'):
+                    start = manualOnset
+                    onsetIndex = data[data[time].gt(start)].index[0]
+                    return onsetIndex
+                elif (onset == 'Onset will be +3SD of the baseline signal'):
+                    startIndex = data[data[time].gt(start)].index[0]
+                    baselineStart = start - avg_duration
+                    baselineStartIndex = data[data[time].gt(baselineStart)].index[0]
+                    baselineAvg = data[torque].iloc[baselineStartIndex:startIndex].mean()
+                    baselineSD = data[torque].iloc[baselineStartIndex:startIndex].std()
+                    threeSD = baselineSD * 3
+                    onsetIndex = data[data[torque]>(baselineAvg + threeSD)].index[0]
+                    return onsetIndex
+        def rfdcalc(data, onsetIndex, time = 'Time', rfd50Time = 0.050, rfd100Time = 0.100, rfd200Time = 0.200): # Define function for calculation of RFD
             rel50Time = data.loc[onsetIndex,time] + rfd50Time
             rel100Time = data.loc[onsetIndex,time] + rfd100Time
             rel200Time = data.loc[onsetIndex,time] + rfd200Time
@@ -291,12 +280,14 @@ with inputs:
                                       index=[0])
             return output
         
-        onset = baseline(data=forceData) # Calculate onsetIndex to be used as RFD start point
+                
+        onsetIndex = baseline(data=forceData) # Calculate onsetIndex to be used as RFD start point
         if filter_data:
-            rfdTable = rfdcalc(data=forceData,onsetIndex = onset.loc[0,'onsetIndex'],startTorque = onset.loc[0,'startTorque']) # Calculate RFD values
+            rfdTable = rfdcalc(data=forceData,onsetIndex = onsetIndex) # Calculate RFD values
         else:
-            rfdTable = rfdcalc(data=forceData,onsetIndex = onset.loc[0,'onsetIndex'],startTorque = onset.loc[0,'startTorque']) #Calculate RFD values           
+            rfdTable = rfdcalc(data=forceData,onsetIndex = onsetIndex) #Calculate RFD values           
         finalRfdTable = rfdTable.loc[0,['rfd50','rfd100','rfd200']] #Store RFD values
+
 
 #Create RFD container for viewing results
 with rfd:
@@ -310,7 +301,7 @@ with rfd:
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'filtered'],label='rfd50')
                 ax4.scatter(forceData.loc[rfdTable['onehundred_index'],'Time'],forceData.loc[rfdTable['onehundred_index'],'filtered'],label='rfd100')
                 ax4.scatter(forceData.loc[rfdTable['twohundred_index'],'Time'],forceData.loc[rfdTable['twohundred_index'],'filtered'],label='rfd200')
-                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onset.loc[0,'onsetIndex'],'filtered'],color='r',linestyle='--',label='onset')
+                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onsetIndex,'filtered'],color='r',linestyle='--',label='onset')
                 legend = ax4.legend(loc='upper right')
                 ax4.set(xlabel = 'Time (s)',
                         ylabel = 'Force (N)',
@@ -318,11 +309,10 @@ with rfd:
                 st.pyplot(fig4)
             elif 'Corrected' in forceData.columns: #Generate plot of corrected data with onset and timing info for RFD
                 ax4.plot(forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Time'],forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Corrected'])
-                #ax4.plot(forceData['Time'],forceData['Corrected'],label='Force')
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'Corrected'],label='rfd50')
                 ax4.scatter(forceData.loc[rfdTable['onehundred_index'],'Time'],forceData.loc[rfdTable['onehundred_index'],'Corrected'],label='rfd100')
                 ax4.scatter(forceData.loc[rfdTable['twohundred_index'],'Time'],forceData.loc[rfdTable['twohundred_index'],'Corrected'],label='rfd200')
-                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onset.loc[0,'onsetIndex'],'Corrected'],color='r',linestyle='--',label='onset')
+                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onsetIndex,'Corrected'],color='r',linestyle='--',label='onset')
                 legend = ax4.legend(loc='upper right')
                 ax4.set(xlabel = 'Time (s)',
                         ylabel = 'Force (N)',
@@ -330,11 +320,10 @@ with rfd:
                 st.pyplot(fig4)
             else: #Generate plot of uncorrected force data with onset and timing info for RFD
                 ax4.plot(forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Time'],forceData.loc[(forceData['Time']>recordStartTime) & (forceData['Time']<stopTime),'Force'])
-                #ax4.plot(forceData['Time'],forceData['Force'],label='Force')
                 ax4.scatter(forceData.loc[rfdTable['fifty_index'],'Time'],forceData.loc[rfdTable['fifty_index'],'Force'],label='rfd50')
                 ax4.scatter(forceData.loc[rfdTable['onehundred_index'],'Time'],forceData.loc[rfdTable['onehundred_index'],'Force'],label='rfd100')
                 ax4.scatter(forceData.loc[rfdTable['twohundred_index'],'Time'],forceData.loc[rfdTable['twohundred_index'],'Force'],label='rfd200')
-                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onset.loc[0,'onsetIndex'],'Force'],color='r',linestyle='--',label='onset')
+                ax4.hlines(xmin=0,xmax=100,y=forceData.loc[onsetIndex,'Force'],color='r',linestyle='--',label='onset')
                 legend = ax4.legend(loc='upper right')
                 ax4.set(xlabel = 'Time (s)',
                         ylabel = 'Force (N)',
