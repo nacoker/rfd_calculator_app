@@ -1,9 +1,10 @@
 matplotlib==3.10.8
 numpy==2.4.1
 pandas==2.3.3
-Pillow==12.1.0
+Pillow==11.9.0
 plotly==6.5.0
 scikit_learn==1.8.0
 scipy==1.17.0
 streamlit==1.44.1
 streamlit_extras==0.7.8
+
