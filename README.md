@@ -122,4 +122,4 @@ the sample that occurred 50ms after onset.
 You can also download your image and data, respectively. At this point, you're done!
 
 If you are having any issues with the app, please feel free to raise an issue
-[here]('https://github.com/nacoker/rfd_calculator_app/issues').
+[here](https://github.com/nacoker/rfd_calculator_app/issues).
