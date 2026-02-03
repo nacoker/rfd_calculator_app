@@ -1,28 +1,125 @@
-# rfd_calculator_app
-Streamlit app that will take an isometric force time-series and calculate RFD through either automated or manual detection methods
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)]
+[![Bluesky followers](https://img.shields.io/bluesky/followers/:ncokerphd.bsky.social)]
+
+
+# Rate of Force Development Calculator App
+This is a Streamlit app that will take an isometric force time-series and calculate RFD through either automated or manual detection methods
 
 [You can access the app here](https://rfd-calculator.streamlit.app/)
 
-The rfd_app.py file creates a streamlit app that accepts inputs from the user and calculates commonly used metrics for rate of force development (RFD) based on user responses. The app consists of five collapsible menus that produce a step-by-step walkthrough. 
+The app.py file creates a streamlit app that accepts inputs from the user, 
+calculates commonly used metrics for rate of force development (RFD) based 
+on user responses, and visualizes those values for you. The app consists of 
+five pages which provide a step-by-step walkthrough. 
 
-## Step 1: Uploading a calibration file
+## Page 1: Importing and Calibrating Your Data
 
-The first dropdown menu is used to determine whether or not the data need to be adjusted prior to analysis. If the user plans to upload force data that is expressed in Volts instead of Newtons, then they should select "Yes" and upload a tab-delimited .txt file consisting of two columns: a column of output voltages recorded by their force device with known loads applied, and a column of the weight of the load in Newtons. If this is done, linear regression will be used to convert voltage values to force values on the subsequent dataset. If the data being uploaded are already expressed in Newtons, click "No".
+In the first step, you can select a force file of your own and upload it to the
+app. The file should be uploaded as either a .txt or .csv file, and contain 
+only two columns of data - column 1 should be your time series, and column 2 
+should be the force reading from a dynamometer or load cell. The data you 
+upload should look like the table below. 
 
-## Step 2: Uploading your force trace
+|Time (s)|Force (V)|
+|--------|---------|
+|0.000   |0.050    |
+|0.001   |0.052    |
+|0.002   |0.048    |
+|0.003   |0.053    |
+|0.004   |0.051    |
+|0.005   |0.053    |
+|0.006   |0.068    |
+|0.007   |0.079    |
+|0.008   |0.092    |
+|0.009   |0.117    |
+|0.010   |0.134    |
+|--------|---------|
+**Table 1.** Example force-time curve structure.
 
-The second dropdown menu is used to import the data that will be used for analysis. This should also be a tab-delimited .txt file consisting of two columns: a column of the time values corresponding to the force measurement, and a column of force measurements. An example image is provided on the left. 
+If your force data consists of uncalibrated voltage readings, you can also 
+upload a calibration file in this step to convert from Volts to Newtons using 
+linear regression. 
 
-## Step 3: Inspecting your dataset
+Once you have uploaded your data and calibrated if necessary, click the button 
+to proceed to Step 2.
 
-The third dropdown menu shows a dataframe of the file uploaded in step 2 as well as a plot of force changes over time. **NOTE**: If a calibration file was uploaded in step 1, there will be a 3rd column, 'Corrected', which is the force expressed in Newtons according to the values predicted from the calibration file. In this case, the data plotted will be 'Corrected' over time, not 'Force'. 
+## Page 2: Preprocessing Your Data
 
-This section also accepts user inputs, which is useful in the event that multiple contractions are written onto the same file. These inputs are used to define the beginning and end of the contraction of interest. For example, the sample file 'MVIC TEST.txt' consists of three maximal contractions, each 15 seconds in length: five seconds of quiet recording, a five second maximal isometric contraction, and five seconds of rest following the end of the contraction. If the user would like to analyze the first contraction, they should enter values of '0.0' and '15.0', respectively. However, if they wanted to analyze the second contraction, they should enter values of '15.0' and '30.0', respectively. 
+In Step 2, you will see a figure showing your force data uploaded in Step 1. If
+you elected to calibrate your data, you will see the calibrated output. From 
+here, inspect the figure for anomalies (countermovement, pretension, etc.) and 
+provide preliminary inputs about how you want your data to be treated. The 
+first question asks when the contraction was supposed to start. In the example
+ image below, the recording lasts for 15 seconds - 5 seconds of steady baseline
+ recording, 5 seconds of maximal contraction, and 5 seconds of rest at the end. 
+ 
+ [!example]('/example_mvic/mvic_figure.png')
+ **Figure 1.** Example isometric force trace.
+ 
+ In this trial, since the contraction was supposed to start at exactly 5 
+ seconds, 5.000 should be entered. This will be used to produce an onset 
+ visualization in Step 3. 
+ 
+ The only other questions here relate to whether your force output requires 
+ offset correction, which you should be able to see from the visual trace, and
+ whether or not you would like to filter your data before calculating RFD. If
+ yes is selected, data are filtered using a 4th-order, low-pass Butterworth 
+ filter with a cutoff frequency of 15 Hz by default. These settings can be 
+ changed by adjusting the values on the slider bars. Lastly, enter the sampling rate of 
+ your force device, which will be used in the data filtering process.
+  
+Once the appropriate inputs are selected for your file, proceed to Step 3. 
 
-## Step 4: Provide inputs to determine how RFD will be calculated
+## Page 3: Inspecting your dataset
 
-This section accepts user inputs which are used to make decisions relevant to RFD calculation. The first is to enter the sampling rate in Hz and select whether the data will require offset correction. If the user indicates offset correction is needed, an average of the baseline signal is calculated and subtracted from the entire time series. The second column asks the user to determine the method of determining contraction onset as well as which RFD values they would like to calculate. The onset method selection can be set to either an automatic or manual onset detection. If the automatic input is selected, the mean and 3 standard deviations of the baseline signal will be calculated, and onset will be determined as the first value that exceeds baseline + 3SD. If manual onset detection is selected, the user will be asked when the contraction was supposed to start and a time window they would like to view. A figure is created that is centered on the start input around the viewing window (e.g. if 5 seconds and 300 ms are selected, the figure will show 4.85 to 5.15 s). Based on this figure, the user is asked to visually determine contraction onset. Once these inputs are set, the user can click the button below to calculate RFD. 
+In Step 3, you will be asked to provide inputs related to how you want to calculate 
+Rate of Force Development (RFD).
 
-## Step 5: View and download RFD values
+First, select a method for determining the onset of contraction. 
 
-Once the button in step 4 is clicked, a figure will be created showing the force-time curve, the instant of onset (horizontal red line), and the rfd values selected. Additionally, below the figure, the RFD values are presented in a dataframe, and may also be downloaded as a .csv file. 
+## Manual Onset Determination
+If you select "Manual Onset Determination", a force-time curve will appear 
+that is isolated to the time window you listed for when the contraction was 
+supposed to start. 
+
+The default viewing window is 300ms centered around the expected onset, but 
+this can be adjusted using the slider on the screen. If the contraction starts 
+earlier or later than expected, you may need to go back to Step 2 to adjust the
+expected start time. 
+
+Once you have a viewing window that clearly shows the noise in the baseline 
+signal as well as a clear rise in force, you can hover your cursor over the 
+figure to see both time and force information. With this, you can use whatever 
+manual method you wish to determine the exact moment of onset. Once this is 
+determined, enter the timing information into the text box below the figure. 
+
+## Automated Onset Calculation
+
+The other option is to calculate the onset automatically 
+as the first sample that exceeds the mean of the baseline signal by at least 
++3 standard deviations. 
+
+## RFD Metric Selection and Calculation
+
+Once you have selected the method for determining your contraction onset and 
+provided the necessary inputs, you can select which RFD variables you would 
+like to calculate. By default, RFD0-50, RFD0-100, and RFD0-200 are returned, 
+but you can deselect any variables you'd like.
+
+Once you're done, click the button to Proceed to Step 4.
+
+## Step 4: View and Download RFD Values
+
+Once you move past Step 3, you should see two figures followed by the RFD 
+values you selected. 
+
+The figure on the left should be your full force-time curve, with a red horizontal 
+line indicating the onset of contraction where it intersects with the curve, and
+a series of colored dots corresponding to the relevant time points used for calculating RFD. 
+For example, if you selected RFD0-50 as a metric, you should see a blue dot corresponding to 
+the sample that occurred 50ms after onset. 
+
+You can also download your image and data, respectively. At this point, you're done!
+
+If you are having any issues with the app, please feel free to raise an issue
+[here]('https://github.com/nacoker/rfd_calculator_app/issues').
