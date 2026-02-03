@@ -53,7 +53,7 @@ first question asks when the contraction was supposed to start. In the example
  image below, the recording lasts for 15 seconds - 5 seconds of steady baseline
  recording, 5 seconds of maximal contraction, and 5 seconds of rest at the end. 
  
- [!example]('/example_mvic/mvic_figure.png')
+ ![Example MVIC]('example_mvic/mvic_figure.png')
  **Figure 1.** Example isometric force trace.
  
  In this trial, since the contraction was supposed to start at exactly 5 
