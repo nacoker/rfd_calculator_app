@@ -52,13 +52,13 @@ subplot_data = (forceData
 ax[1].plot(subplot_data[[inputs_dict['time_column']]],
            subplot_data[[inputs_dict['force_column']]])
 ax[1].scatter(subplot_data.loc[rfdTable['rfd50_index'], inputs_dict['time_column']],
-              subplot_data.loc[rfdTable['rfd50_index'], inputs_dict['time_column']],
+              subplot_data.loc[rfdTable['rfd50_index'], inputs_dict['force_column']],
               label = 'rfd50')
 ax[1].scatter(subplot_data.loc[rfdTable['rfd100_index'], inputs_dict['time_column']],
-              subplot_data.loc[rfdTable['rfd100_index'], inputs_dict['time_column']],
+              subplot_data.loc[rfdTable['rfd100_index'], inputs_dict['force_column']],
               label = 'rfd100')
 ax[1].scatter(subplot_data.loc[rfdTable['rfd200_index'], inputs_dict['time_column']],
-              subplot_data.loc[rfdTable['rfd200_index'], inputs_dict['time_column']],
+              subplot_data.loc[rfdTable['rfd200_index'], inputs_dict['force_column']],
               label = 'rfd200')
 ax[1].hlines(xmin = viewWindowTime_low,
              xmax = viewWindowTime_high,
